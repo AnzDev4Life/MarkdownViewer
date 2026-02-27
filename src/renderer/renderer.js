@@ -3,6 +3,8 @@ const preview = document.getElementById("preview");
 const openBtn = document.getElementById("openBtn");
 const beautifyBtn = document.getElementById("beautifyBtn");
 const minifyBtn = document.getElementById("minifyBtn");
+const toggleSourceBtn = document.getElementById("toggleSourceBtn");
+const togglePreviewBtn = document.getElementById("togglePreviewBtn");
 const recentFilesSelect = document.getElementById("recentFiles");
 const searchBox = document.getElementById("searchBox");
 const findNextBtn = document.getElementById("findNextBtn");
@@ -10,6 +12,28 @@ const themeToggle = document.getElementById("themeToggle");
 const fontSize = document.getElementById("fontSize");
 
 let currentFilePath = '';
+
+function isPreviewable(filePath) {
+  if (!filePath || typeof filePath !== 'string') return false;
+  const match = filePath.match(/\.([^.]+)$/);
+  if (!match) return false;
+  const ext = match[1].toLowerCase();
+  return ['md','markdown','html','htm'].includes(ext);
+}
+
+function loadFile(path, content) {
+  currentFilePath = path || '';
+  editor.value = content || '';
+  render();
+  if (isPreviewable(path)) {
+    setEditorVisible(false);
+    setPreviewVisible(true);
+    autoShowPreview = true;
+  } else {
+    setEditorVisible(true);
+  }
+  if (path) saveToRecent(path, content);
+}
 
 function setPreviewVisible(visible) {
   if (visible) {
@@ -21,6 +45,18 @@ function setPreviewVisible(visible) {
   }
 }
 
+function setEditorVisible(visible) {
+  if (visible) {
+    editor.classList.remove('hidden');
+    preview.classList.remove('fullwidth');
+  } else {
+    editor.classList.add('hidden');
+    preview.classList.add('fullwidth');
+  }
+}
+
+let autoShowPreview = true; // when false, render() will not force preview visible
+
 async function render() {
   try {
     if (window.electronAPI && typeof window.electronAPI.renderMarkdown === 'function') {
@@ -28,17 +64,17 @@ async function render() {
       const res = (result && typeof result.then === 'function') ? await result : result;
       if (res && typeof res === 'object' && res.type) {
         if (res.type === 'html' || res.type === 'markdown') {
-          setPreviewVisible(true);
+          if (autoShowPreview) setPreviewVisible(true);
           preview.innerHTML = res.content;
         } else {
-          setPreviewVisible(false);
+          if (autoShowPreview) setPreviewVisible(false);
           preview.textContent = res.content;
         }
       } else if (typeof res === 'string') {
-        setPreviewVisible(true);
+        if (autoShowPreview) setPreviewVisible(true);
         preview.innerHTML = res;
       } else {
-        setPreviewVisible(false);
+        if (autoShowPreview) setPreviewVisible(false);
         preview.textContent = String(res || editor.value);
       }
     } else {
@@ -47,16 +83,16 @@ async function render() {
       const looksLikeMarkdown = /^\s*(#|[-*]|>|```)/.test(text);
       const looksLikeHtml = /<[a-z!][\s\S]*>/i.test(text);
       if (looksLikeMarkdown || looksLikeHtml) {
-        setPreviewVisible(true);
+        if (autoShowPreview) setPreviewVisible(true);
         preview.textContent = text;
       } else {
-        setPreviewVisible(false);
+        if (autoShowPreview) setPreviewVisible(false);
         preview.textContent = text;
       }
     }
   } catch (e) {
     console.error('Render error', e);
-    setPreviewVisible(false);
+    if (autoShowPreview) setPreviewVisible(false);
     preview.textContent = editor.value;
   }
 }
@@ -91,10 +127,7 @@ openBtn.addEventListener("click", async () => {
   if (window.electronAPI && typeof window.electronAPI.openFile === 'function') {
     const result = await window.electronAPI.openFile();
     if (!result || result.canceled) return;
-    currentFilePath = result.filePath || '';
-    editor.value = result.content;
-    render();
-    if (result.filePath) saveToRecent(result.filePath, result.content);
+    loadFile(result.filePath || '', result.content);
     return;
   }
   // Fallback for non-Electron contexts: use file input
@@ -106,10 +139,7 @@ openBtn.addEventListener("click", async () => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      currentFilePath = file.name || '';
-      editor.value = reader.result || '';
-      render();
-      saveToRecent(currentFilePath, editor.value);
+      loadFile(file.name || '', reader.result || '');
     };
     reader.readAsText(file);
   };
@@ -122,9 +152,7 @@ recentFilesSelect.addEventListener("change", () => {
   const list = JSON.parse(localStorage.getItem('recentFiles') || '[]');
   const item = list[Number(idx)];
   if (item) {
-    currentFilePath = item.path || '';
-    editor.value = item.content || '';
-    render();
+    loadFile(item.path || '', item.content || '');
   }
 });
 
@@ -138,10 +166,7 @@ document.addEventListener("drop", async (e) => {
   try {
     const reader = new FileReader();
     reader.onload = () => {
-      currentFilePath = file.path || file.name || '';
-      editor.value = reader.result || '';
-      render();
-      try { saveToRecent(currentFilePath, editor.value); } catch(e) {}
+      loadFile(file.path || file.name || '', reader.result || '');
     };
     reader.readAsText(file);
   } catch (err) {
@@ -195,13 +220,26 @@ fontSize.addEventListener("input", () => {
   preview.style.fontSize = fontSize.value + "px";
 });
 
+// toggle buttons
+if (togglePreviewBtn) {
+  togglePreviewBtn.addEventListener('click', () => {
+    const currentlyHidden = preview.classList.contains('hidden');
+    setPreviewVisible(currentlyHidden);
+    autoShowPreview = currentlyHidden; // if we just showed it, allow future auto shows; if we hid it manually, stop auto re-opening
+  });
+}
+
+if (toggleSourceBtn) {
+  toggleSourceBtn.addEventListener('click', () => {
+    const currentlyHidden = editor.classList.contains('hidden');
+    setEditorVisible(currentlyHidden);
+  });
+}
+
 // handle file sent from main process (startup/auto-open)
 async function applyFileResult(result) {
   if (!result || result.canceled) return;
-  currentFilePath = result.filePath || '';
-  editor.value = result.content || '';
-  await render();
-  if (result.filePath) saveToRecent(result.filePath, result.content);
+  loadFile(result.filePath || '', result.content || '');
 }
 
 // ask main for initial file when DOM is ready

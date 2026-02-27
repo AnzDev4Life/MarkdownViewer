@@ -48,7 +48,9 @@ textarea#editor {
 .preview ul, .preview ol { padding-left: 1.25em; }
 /* End markdown styles */
 
-/* Preview visibility helpers */
+/* Visibility helpers */
 .preview.hidden { display: none; }
 textarea#editor.fullwidth { width: 100%; }
+textarea#editor.hidden { display: none; }
+.preview.fullwidth { width: 100%; }
 
