@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MarkdownViewer</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:;">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="controls">
+      <button id="openBtn">Open File</button>
+      <button id="beautifyBtn">Beautify</button>
+      <button id="minifyBtn">Minify</button>
+      <select id="recentFiles"><option value="">Recent files</option></select>
+      <input id="searchBox" type="search" placeholder="Search in document">
+      <button id="findNextBtn">Find</button>
+      <label>Theme: <select id="themeToggle"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <label>Font size: <input id="fontSize" type="range" min="12" max="24" value="14"></label>
+    </div>
+  </header>
+  <main>
+    <textarea id="editor" placeholder="Paste Markdown or open a file..." autofocus></textarea>
+    <div id="preview" class="preview"></div>
+  </main>
+  <script src="renderer.js"></script>
+</body>
+</html>

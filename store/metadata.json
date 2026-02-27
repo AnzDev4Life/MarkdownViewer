@@ -1,0 +1,10 @@
+{
+  "name": "MarkdownViewer",
+  "publisher": "CN=YOUR_PUBLISHER_NAME",
+  "version": "1.0.0",
+  "description": "A fast, accessible Markdown and text file viewer for Windows with live preview and syntax highlighting.",
+  "categories": ["Utilities", "Productivity"],
+  "keywords": ["markdown", "viewer", "text", "editor"],
+  "supportUrl": "",
+  "privacyPolicy": "privacy-policy.md"
+}
