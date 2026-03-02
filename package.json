@@ -54,7 +54,18 @@
         "owner": "annguyen209",
         "repo": "MarkdownViewer"
       }
-    ]
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    }
   }
 }
 
