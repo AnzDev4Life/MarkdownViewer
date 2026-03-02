@@ -47,7 +47,14 @@
         "nsis"
       ],
       "icon": "build/icon.ico"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "annguyen209",
+        "repo": "MarkdownViewer"
+      }
+    ]
   }
 }
 
