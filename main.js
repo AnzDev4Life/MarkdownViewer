@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const MarkdownIt = require('markdown-it');
@@ -10,6 +10,9 @@ const { minify: htmlMinify } = require('html-minifier-terser');
 const sanitizeHtml = require('sanitize-html');
 
 // keep track of a file path that should be opened when a window is ready
+// display name used throughout the UI; matches productName with spacing
+const APP_DISPLAY_NAME = 'Markdown Viewer';
+
 let pendingOpenPath = '';
 let mainWindow = null;
 
@@ -50,6 +53,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 700,
+    title: APP_DISPLAY_NAME,
     webPreferences: {
       preload: path.join(__dirname, 'src', 'preload.js'),
       nodeIntegration: false,
@@ -70,6 +74,13 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // ensure the runtime name is pretty for menus/dialogs
+  try {
+    app.setName(APP_DISPLAY_NAME);
+  } catch (e) {
+    // setting name may only be supported on some platforms
+  }
+
   createWindow();
 
   // if the app was launched with a file argument
@@ -77,6 +88,97 @@ app.whenReady().then(() => {
     const args = process.argv.slice(1);
     const fileArg = args.find(arg => arg.match(/\.(md|markdown)$/i));
     if (fileArg) pendingOpenPath = fileArg;
+  }
+
+  // set up application menu with File/Edit/Help menus
+  try {
+    const isMac = process.platform === 'darwin';
+
+    const fileSubmenu = [
+      {
+        label: 'Open...',
+        accelerator: 'CmdOrCtrl+O',
+        click: async () => {
+          try {
+            const { canceled, filePaths } = await dialog.showOpenDialog({
+              properties: ['openFile'],
+              filters: [
+                { name: 'Markdown and text', extensions: ['md','markdown','txt','json','js','ts','html','css'] },
+                { name: 'All Files', extensions: ['*'] }
+              ]
+            });
+            if (!canceled && filePaths && filePaths.length > 0) {
+              openPathInWindow(filePaths[0]);
+            }
+          } catch (e) {
+            console.error('Open menu error', e);
+          }
+        }
+      },
+      isMac ? { role: 'close' } : { role: 'quit' }
+    ];
+
+    const editSubmenu = [
+      { role: 'undo' },
+      { role: 'redo' },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      ...(isMac
+        ? [
+            { role: 'pasteAndMatchStyle' },
+            { role: 'delete' },
+            { role: 'selectAll' },
+            { type: 'separator' },
+            {
+              label: 'Speech',
+              submenu: [{ role: 'startspeaking' }, { role: 'stopspeaking' }]
+            }
+          ]
+        : [
+            { role: 'delete' },
+            { type: 'separator' },
+            { role: 'selectAll' }
+          ])
+    ];
+
+    const template = [
+      { label: 'File', submenu: fileSubmenu },
+      { label: 'Edit', submenu: editSubmenu },
+      ...(isMac ? [{ label: app.name, submenu: [{ role: 'about' }] }] : []),
+      {
+        label: 'Help',
+        submenu: [
+          {
+            label: 'About',
+            click: async () => {
+              try {
+                const readmePath = path.join(__dirname, 'ABOUT.md');
+                let content = '';
+                try {
+                  content = await fs.readFile(readmePath, 'utf8');
+                } catch (e) {
+                  content = `${app.getName()} - Version ${app.getVersion()}\n\nNo ABOUT.md found.`;
+                }
+                await dialog.showMessageBox({
+                  type: 'info',
+                  title: `About ${app.getName()}`,
+                  message: `${app.getName()}`,
+                  detail: content,
+                  buttons: ['OK']
+                });
+              } catch (e) {
+                console.error('About dialog error', e);
+              }
+            }
+          }
+        ]
+      }
+    ];
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  } catch (e) {
+    console.error('Menu setup failed', e);
   }
 });
 
@@ -214,3 +316,4 @@ async function openPathInWindow(filePath) {
     mainWindow.webContents.send('auto-open', { canceled: true });
   }
 }
+
