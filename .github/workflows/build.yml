@@ -28,10 +28,15 @@ jobs:
       - name: Install dependencies
         run: npm ci --silent
 
-      - name: Build
+      - name: Build (branch push — no publish)
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        run: npm run dist -- --publish never
+
+      - name: Build and publish (tag push — creates GitHub Release)
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist -- --publish never
+        run: npm run dist -- --publish always
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
