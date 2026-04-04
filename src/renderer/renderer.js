@@ -288,3 +288,29 @@ findNextBtn.addEventListener("click", () => {
 // initial load
 loadRecentFiles();
 render();
+
+// Parallel scrolling: sync scroll position between editor and preview when both are visible
+let _scrollSyncing = false;
+
+function syncScroll(source, target) {
+  if (_scrollSyncing) return;
+  _scrollSyncing = true;
+  const scrollable = source.scrollHeight - source.clientHeight;
+  if (scrollable > 0) {
+    const ratio = source.scrollTop / scrollable;
+    target.scrollTop = ratio * (target.scrollHeight - target.clientHeight);
+  }
+  requestAnimationFrame(() => { _scrollSyncing = false; });
+}
+
+function bothPanelsVisible() {
+  return !editor.classList.contains('hidden') && !preview.classList.contains('hidden');
+}
+
+editor.addEventListener('scroll', () => {
+  if (bothPanelsVisible()) syncScroll(editor, preview);
+});
+
+preview.addEventListener('scroll', () => {
+  if (bothPanelsVisible()) syncScroll(preview, editor);
+});
