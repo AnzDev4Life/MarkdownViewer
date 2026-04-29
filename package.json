@@ -53,7 +53,8 @@
       {
         "provider": "github",
         "owner": "AnzDev4Life",
-        "repo": "MarkdownViewer"
+        "repo": "MarkdownViewer",
+        "draft": false
       }
     ],
     "linux": {
