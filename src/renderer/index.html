@@ -25,6 +25,16 @@
         <button id="minifyBtn" title="Minify document">Minify</button>
       </div>
       <div class="toolbar-sep"></div>
+      <div class="export-dropdown" id="exportDropdown">
+        <button id="exportBtn" title="Export document">Export ▾</button>
+        <div class="dropdown-menu" id="exportMenu">
+          <button class="dropdown-item" data-format="pdf">PDF Document</button>
+          <button class="dropdown-item" data-format="docx">Word Document (.docx)</button>
+          <button class="dropdown-item" data-format="html">HTML File</button>
+          <button class="dropdown-item" data-format="png">PNG Image</button>
+        </div>
+      </div>
+      <div class="toolbar-sep"></div>
       <div class="toolbar-group">
         <input id="searchBox" type="search" placeholder="Find...">
         <button id="findNextBtn">Find</button>

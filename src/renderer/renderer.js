@@ -10,6 +10,8 @@ const searchBox = document.getElementById('searchBox');
 const findNextBtn = document.getElementById('findNextBtn');
 const themeToggle = document.getElementById('themeToggle');
 const fontSize = document.getElementById('fontSize');
+const exportBtn = document.getElementById('exportBtn');
+const exportMenu = document.getElementById('exportMenu');
 
 const HL_THEME_MAP = {
   'light':           '../../node_modules/highlight.js/styles/github.css',
@@ -326,6 +328,77 @@ function bothPanelsVisible() {
 
 editor.addEventListener('scroll', () => { if (bothPanelsVisible()) syncScroll(editor, preview); });
 preview.addEventListener('scroll', () => { if (bothPanelsVisible()) syncScroll(preview, editor); });
+
+// Export dropdown
+if (exportBtn && exportMenu) {
+  exportBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    exportMenu.classList.toggle('open');
+  });
+
+  document.addEventListener('click', () => {
+    exportMenu.classList.remove('open');
+  });
+
+  exportMenu.addEventListener('click', (e) => e.stopPropagation());
+
+  document.querySelectorAll('.dropdown-item').forEach((item) => {
+    item.addEventListener('click', async () => {
+      exportMenu.classList.remove('open');
+      if (exportBtn.disabled) return;
+      const format = item.dataset.format;
+
+      if (!editor.value.trim()) {
+        alert('Nothing to export — paste some Markdown first.');
+        return;
+      }
+
+      exportBtn.disabled = true;
+      exportBtn.textContent = 'Exporting...';
+
+      try {
+        const defaultName = currentFilePath
+          ? currentFilePath.split(/[\\/]/).pop().replace(/\.[^.]+$/, '')
+          : 'document';
+
+        let result;
+        if (format === 'pdf') {
+          result = await window.electronAPI.exportFile('pdf', { defaultName });
+        } else if (format === 'html') {
+          const cssText = await window.electronAPI.getStylesCss();
+          result = await window.electronAPI.exportFile('html', {
+            renderedHtml: preview.innerHTML,
+            cssText,
+            defaultName,
+          });
+        } else if (format === 'png') {
+          result = await window.electronAPI.exportFile('png', { defaultName });
+        } else if (format === 'docx') {
+          result = await window.electronAPI.exportFile('docx', {
+            markdown: editor.value,
+            defaultName,
+          });
+        }
+
+        if (result && result.success) {
+          const savedName = result.savedPath.split(/[\\/]/).pop();
+          const statusLeft = document.getElementById('statusLeft');
+          if (statusLeft) {
+            statusLeft.textContent = `Saved: ${savedName}`;
+            setTimeout(() => updateStatus(), 3000);
+          }
+        } else if (result && !result.canceled) {
+          alert('Export failed: ' + (result.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Export failed: ' + e.message);
+      } finally {
+        exportBtn.disabled = false;
+        exportBtn.textContent = 'Export ▾';
+      }
+    });
+  });
+}
 
 // --- Startup ---
 const savedTheme = localStorage.getItem('theme') || 'github';

@@ -8,6 +8,7 @@ const { minify: terserMinify } = require('terser');
 const CleanCSS = require('clean-css');
 const { minify: htmlMinify } = require('html-minifier-terser');
 const sanitizeHtml = require('sanitize-html');
+const exporter = require('./src/exporter');
 
 // keep track of a file path that should be opened when a window is ready
 // display name used throughout the UI; matches productName with spacing
@@ -331,6 +332,32 @@ ipcMain.handle('format:minify', async (event, text, filePath) => {
     console.error('Minify error', e);
     return String(text || '');
   }
+});
+
+ipcMain.handle('get-styles-css', async () => {
+  try {
+    return await fs.readFile(path.join(__dirname, 'src', 'renderer', 'styles.css'), 'utf8');
+  } catch (e) {
+    return '';
+  }
+});
+
+ipcMain.handle('export:pdf', async (event, payload = {}) => {
+  if (!mainWindow) return { success: false, error: 'Window not available' };
+  return exporter.exportPdf(mainWindow.webContents, payload.defaultName || 'document');
+});
+
+ipcMain.handle('export:html', async (event, payload = {}) => {
+  return exporter.exportHtml(payload.renderedHtml || '', payload.cssText || '', payload.defaultName || 'document');
+});
+
+ipcMain.handle('export:png', async (event, payload = {}) => {
+  if (!mainWindow) return { success: false, error: 'Window not available' };
+  return exporter.exportPng(mainWindow.webContents, payload.defaultName || 'document');
+});
+
+ipcMain.handle('export:docx', async (event, payload = {}) => {
+  return exporter.exportDocx(payload.markdown || '', payload.defaultName || 'document');
 });
 
 app.on('window-all-closed', () => {
