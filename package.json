@@ -1,6 +1,6 @@
 {
   "name": "markdownviewer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -52,7 +52,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "annguyen209",
+        "owner": "AnzDev4Life",
         "repo": "MarkdownViewer"
       }
     ],
