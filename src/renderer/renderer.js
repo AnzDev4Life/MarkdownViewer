@@ -363,7 +363,7 @@ if (exportBtn && exportMenu) {
 
         let result;
         if (format === 'pdf') {
-          result = await window.electronAPI.exportFile('pdf', { defaultName });
+          result = await window.electronAPI.exportFile('pdf', { markdown: editor.value, defaultName });
         } else if (format === 'html') {
           const cssText = await window.electronAPI.getStylesCss();
           result = await window.electronAPI.exportFile('html', {
@@ -371,8 +371,6 @@ if (exportBtn && exportMenu) {
             cssText,
             defaultName,
           });
-        } else if (format === 'png') {
-          result = await window.electronAPI.exportFile('png', { defaultName });
         } else if (format === 'docx') {
           result = await window.electronAPI.exportFile('docx', {
             markdown: editor.value,

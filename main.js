@@ -343,17 +343,11 @@ ipcMain.handle('get-styles-css', async () => {
 });
 
 ipcMain.handle('export:pdf', async (event, payload = {}) => {
-  if (!mainWindow) return { success: false, error: 'Window not available' };
-  return exporter.exportPdf(mainWindow.webContents, payload.defaultName || 'document');
+  return exporter.exportPdf(payload.markdown || '', payload.defaultName || 'document');
 });
 
 ipcMain.handle('export:html', async (event, payload = {}) => {
   return exporter.exportHtml(payload.renderedHtml || '', payload.cssText || '', payload.defaultName || 'document');
-});
-
-ipcMain.handle('export:png', async (event, payload = {}) => {
-  if (!mainWindow) return { success: false, error: 'Window not available' };
-  return exporter.exportPng(mainWindow.webContents, payload.defaultName || 'document');
 });
 
 ipcMain.handle('export:docx', async (event, payload = {}) => {

@@ -2,34 +2,51 @@
 
 const { dialog } = require('electron');
 const fs = require('fs').promises;
+const path = require('path');
+const os = require('os');
+const { execFile } = require('child_process');
 const MarkdownIt = require('markdown-it');
 
 const mdParser = new MarkdownIt({ html: true, linkify: true, typographer: true });
 
-async function exportPdf(webContents, defaultName) {
+function runPandoc(args) {
+  return new Promise((resolve, reject) => {
+    execFile('pandoc', args, { windowsHide: true, timeout: 30000 }, (err, _stdout, stderr) => {
+      if (err) {
+        const msg = err.code === 'ENOENT'
+          ? 'Pandoc is not installed.\n\nDownload from: https://pandoc.org/installing.html\n\nAfter installing, restart the app.'
+          : (stderr || err.message);
+        reject(new Error(msg));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+async function exportPdf(markdown, defaultName) {
   const { canceled, filePath } = await dialog.showSaveDialog({
     defaultPath: defaultName + '.pdf',
     filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
   });
   if (canceled || !filePath) return { success: false, canceled: true };
 
-  const cleanup = `(() => { const el = document.getElementById('print-override'); if (el) el.remove(); })()`;
+  const tmpMd = path.join(os.tmpdir(), `mdviewer-${Date.now()}.md`);
   try {
-    await webContents.executeJavaScript(`
-      (() => {
-        const s = document.createElement('style');
-        s.id = 'print-override';
-        s.textContent = '#editor,header,#statusBar{display:none!important}.preview{width:100%!important;padding:32px!important;background:#fff!important;color:#000!important}';
-        document.head.appendChild(s);
-      })()
-    `);
-    const pdfBuffer = await webContents.printToPDF({ marginsType: 1, printBackground: false, pageSize: 'A4' });
-    await webContents.executeJavaScript(cleanup);
-    await fs.writeFile(filePath, pdfBuffer);
+    await fs.writeFile(tmpMd, markdown, 'utf8');
+    await runPandoc([
+      tmpMd,
+      '-o', filePath,
+      '--standalone',
+      '-V', 'geometry:margin=1in',
+      '-V', 'colorlinks=true',
+      '-V', 'linkcolor=blue',
+    ]);
     return { success: true, savedPath: filePath };
   } catch (e) {
-    try { await webContents.executeJavaScript(cleanup); } catch (_) {}
     return { success: false, error: e.message };
+  } finally {
+    fs.unlink(tmpMd).catch(() => {});
   }
 }
 
@@ -59,22 +76,6 @@ async function exportHtml(renderedHtml, cssText, defaultName) {
       '</html>',
     ].join('\n');
     await fs.writeFile(filePath, html, 'utf8');
-    return { success: true, savedPath: filePath };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
-async function exportPng(webContents, defaultName) {
-  const { canceled, filePath } = await dialog.showSaveDialog({
-    defaultPath: defaultName + '.png',
-    filters: [{ name: 'PNG Image', extensions: ['png'] }],
-  });
-  if (canceled || !filePath) return { success: false, canceled: true };
-
-  try {
-    const image = await webContents.capturePage();
-    await fs.writeFile(filePath, image.toPNG());
     return { success: true, savedPath: filePath };
   } catch (e) {
     return { success: false, error: e.message };
@@ -277,4 +278,4 @@ async function exportDocx(markdown, defaultName) {
   }
 }
 
-module.exports = { exportPdf, exportHtml, exportPng, exportDocx };
+module.exports = { exportPdf, exportHtml, exportDocx };
