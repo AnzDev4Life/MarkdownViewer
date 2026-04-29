@@ -1,67 +1,98 @@
 # MarkdownViewer
 
-A simple Electron-based Markdown editor and viewer.  Supports live preview, syntax highlighting, and basic formatting tools.  
-The app can now be installed on Windows and will register itself as the default handler for `.md` and `.markdown` files, allowing users to open documents from the Explorer context menu or by double-clicking.
+A desktop Markdown editor and viewer built with Electron. Live preview, 8 built-in themes, syntax highlighting, and one-click export to PDF, DOCX, and HTML — no external tools required.
 
 ## Features
 
-- Open Markdown (and plain text) files with a file picker or drag/drop
-- Live HTML preview with syntax highlighting (highlight.js)
-- Toggle controls for showing/hiding the source editor and preview panels
-- When loading Markdown/HTML files the editor is initially hidden and the preview is shown full-width
-- Beautify/minify support for a variety of file types using Prettier, Terser, CleanCSS
-- Recent file list stored in `localStorage`
-- Windows installer with file association for `.md`/`.markdown`
-- Single-instance handling and automatic opening when a markdown file is launched
+### Editor & Preview
+
+- **Live preview** — preview updates as you type (150 ms debounce)
+- **Split view** — editor and preview side-by-side with synchronised scrolling
+- **Full Markdown rendering** — headings (h1–h6), tables, task lists (`- [ ]` / `- [x]`), strikethrough, blockquotes, fenced code blocks, horizontal rules, links, images
+- **Syntax highlighting** — highlight.js with a code theme matched to the active document theme
+- **Toggle panels** — show/hide editor or preview independently; preview goes full-width when editor is hidden
+- **Open files** — file picker, drag-and-drop, or double-click a `.md`/`.markdown` file in Explorer
+- **Recent files** — last 10 opened files stored in `localStorage`
+- **Search** — find text in the editor with wrap-around
+- **Format / Minify** — Prettier, Terser, and CleanCSS for JS, TS, JSON, CSS, and HTML files
+- **Status bar** — live word count, line count, and filename
+
+### Themes
+
+Eight document themes selectable from the toolbar, each paired with a matching highlight.js syntax theme:
+
+| Theme | Style | Code highlighting |
+|---|---|---|
+| Light | Clean white | github |
+| **GitHub** *(default)* | GitHub README style | github |
+| Solarized Light | Warm cream | base16/solarized-light |
+| Dark | Slate dark | github-dark |
+| GitHub Dark | GitHub dark mode | github-dark |
+| Solarized Dark | Deep teal | base16/solarized-dark |
+| Dracula | Purple accent | base16/dracula |
+| Nord | Arctic blue | base16/nord |
+
+Theme and font size are persisted across sessions via `localStorage`.
+
+### Export
+
+Click **Export ▾** in the toolbar to save the current document:
+
+| Format | How it works |
+|---|---|
+| **PDF** | Renders the preview in a hidden Electron window and exports via `printToPDF` — no external tools needed, full multi-page output with proper table layout |
+| **Word (.docx)** | Converts the markdown token stream to a native Word document using the `docx` package — headings, bold/italic/strikethrough, bullet and numbered lists, tables, code blocks, blockquotes, horizontal rules |
+| **HTML** | Saves a standalone `.html` file with all CSS embedded — opens correctly in any browser with the same look as the app |
+
+## Screenshots
+
+> *Switch themes from the toolbar dropdown. The editor, preview, toolbar, and status bar all repaint instantly.*
 
 ## Installation
 
-1. Download a release from the [Releases](https://github.com/annguyen209/MarkdownViewer/releases) page.
-2. Run the installer (`MarkdownViewer Setup x.y.z.exe`).
-3. After installation you can right-click a `.md` or `.markdown` file and choose **Open with > MarkdownViewer**.  Use "Always use this app" to set it as the default.
-
-> **Note:** running `npm start` in the source does not register associations; only the installed copy does.
+Download the latest installer from the [Releases](https://github.com/AnzDev4Life/MarkdownViewer/releases) page and run `MarkdownViewer Setup x.y.z.exe`. After installation, `.md` and `.markdown` files will open in MarkdownViewer from the Explorer context menu.
 
 ## Development
 
 ```bash
-# clone repository if you haven't already
-git clone https://github.com/annguyen209/MarkdownViewer.git
+git clone https://github.com/AnzDev4Life/MarkdownViewer.git
 cd MarkdownViewer
-
-# install dependencies
 npm install
-
-# run in development mode
 npm start
 ```
 
-### Building
+### Build installer
 
 ```bash
-npm run dist     # produce installer (NSIS target)
+npm run dist
 ```
 
-The packaging step will produce `dist/MarkdownViewer Setup <version>.exe`.  After installing that executable the file associations will be registered automatically.
+Produces `dist/MarkdownViewer Setup <version>.exe` with Windows file associations registered automatically.
 
-## File Association
+## Tech Stack
 
-The Electron builder configuration (`package.json -> build.fileAssociations`) defines
-`.md` and `.markdown` as handled extensions.  During installation the app is added
-to the Windows registry so that Explorer shows it in the **Open with...** menu.
+| | |
+|---|---|
+| Shell | Electron 40 |
+| Markdown rendering | markdown-it 14 |
+| Syntax highlighting | highlight.js 11 |
+| DOCX generation | docx 9 |
+| Code formatting | Prettier, Terser, CleanCSS |
+| Theming | CSS custom properties (no framework) |
 
-The main process uses a single-instance lock to capture file paths passed on the
-command line or received via the `open-file` event (macOS).  The renderer then
-loads and renders the file automatically.
+## Project Structure
+
+```
+main.js               — Electron main process (IPC, menus, file handling)
+src/
+  exporter.js         — Export functions: PDF, DOCX, HTML
+  preload.js          — contextBridge API surface
+  renderer/
+    index.html        — App shell and toolbar
+    renderer.js       — UI logic, theme switching, live preview
+    styles.css        — All themes and markdown styles (CSS variables)
+```
 
 ## License
 
 ISC
-
----
-
-For more details and contribution guidelines, see the source files in `src/`.
-### Panel Visibility
-
-Two new buttons in the header allow you to toggle the visibility of the source (editor) and the rendered preview. By default the source is hidden when a Markdown or HTML file is opened, so you immediately see the rendered content; use **Toggle Source** to bring the editor back. Hiding the preview will no longer re‑open it automatically when you type; click **Toggle Preview** again to bring it back. Likewise **Toggle Source** hides the editor and expands the preview to fill the window.
-
