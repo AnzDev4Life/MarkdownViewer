@@ -419,6 +419,11 @@ button.active {
   border-color: var(--btn-active-border);
 }
 
+button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
 #openBtn {
   background: var(--btn-primary-bg);
   color: var(--btn-primary-fg);

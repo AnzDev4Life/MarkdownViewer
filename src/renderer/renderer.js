@@ -50,11 +50,22 @@ function isPreviewable(filePath) {
   return ['md', 'markdown', 'html', 'htm'].includes(match[1].toLowerCase());
 }
 
+const FORMATTABLE_EXTS = new Set(['js', 'ts', 'json', 'html', 'htm', 'css']);
+
+function updateFormatButtons() {
+  const match = currentFilePath.match(/\.([^.]+)$/);
+  const ext = match ? match[1].toLowerCase() : '';
+  const enabled = FORMATTABLE_EXTS.has(ext);
+  if (beautifyBtn) beautifyBtn.disabled = !enabled;
+  if (minifyBtn) minifyBtn.disabled = !enabled;
+}
+
 function loadFile(path, content) {
   currentFilePath = path || '';
   editor.value = content || '';
   render();
   updateStatus();
+  updateFormatButtons();
   if (isPreviewable(path)) {
     setEditorVisible(false);
     setPreviewVisible(true);
@@ -404,6 +415,7 @@ if (exportBtn && exportMenu) {
 }
 
 // --- Startup ---
+updateFormatButtons();
 const savedTheme = localStorage.getItem('theme') || 'github';
 const savedFontSize = localStorage.getItem('fontSize') || '14';
 fontSize.value = savedFontSize;
