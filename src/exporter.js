@@ -21,11 +21,14 @@ async function exportPdf(renderedHtml, cssText, defaultName) {
     `<title>${defaultName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>`,
     '<style>', cssText.replace(/<\/style/gi, '<\\/style'), '</style>',
     '<style>',
-    // Fix table clipping and add print-friendly resets
-    'body{margin:0;background:#fff!important;color:#000!important}',
-    '.preview{padding:32px!important;max-width:860px;margin:0 auto}',
-    '.preview table{display:table!important;overflow-x:visible!important;width:100%!important}',
+    // styles.css sets body{height:100vh;overflow:hidden;display:flex} which clips content to 1 page.
+    // Reset all app-shell layout constraints so printToPDF sees the full document.
+    'html,body{height:auto!important;min-height:0!important;overflow:visible!important;display:block!important;background:#fff!important;color:#000!important;margin:0;padding:0}',
+    '.preview{display:block!important;width:100%!important;max-width:100%!important;height:auto!important;overflow:visible!important;padding:0.5in!important;box-sizing:border-box!important;font-size:11pt;line-height:1.6}',
+    // Fix table scroll-container → real table so columns don't stack
+    '.preview table{display:table!important;overflow-x:visible!important;width:100%!important;table-layout:fixed}',
     '.preview td,.preview th{word-break:break-word;overflow-wrap:break-word}',
+    // Page break hints
     '.preview pre{page-break-inside:avoid}',
     '.preview h1,.preview h2,.preview h3{page-break-after:avoid}',
     '</style>',
@@ -38,18 +41,19 @@ async function exportPdf(renderedHtml, cssText, defaultName) {
   let win = null;
   try {
     await fs.writeFile(tmpHtml, html, 'utf8');
+    // 794px = A4 width at 96 dpi — prevents mobile-width layout
     win = new BrowserWindow({
       show: false,
-      width: 900,
-      height: 1200,
+      width: 794,
+      height: 1123,
       webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
     await win.loadFile(tmpHtml);
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 400));
     const pdfBuffer = await win.webContents.printToPDF({
-      printBackground: true,
+      printBackground: false,
       pageSize: 'A4',
-      marginsType: 0,
+      marginsType: 1,
     });
     await fs.writeFile(filePath, pdfBuffer);
     return { success: true, savedPath: filePath };
