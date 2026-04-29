@@ -1,7 +1,7 @@
 {
   "name": "markdownviewer",
   "version": "1.0.0",
-  "description": "",
+  "description": "A fast, lightweight Markdown viewer",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -47,7 +47,8 @@
       "target": [
         "nsis"
       ],
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "publisherName": "Anson Nguyen"
     },
     "publish": [
       {
