@@ -1,52 +1,63 @@
 'use strict';
 
-const { dialog } = require('electron');
+const { dialog, BrowserWindow } = require('electron');
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
-const { execFile } = require('child_process');
 const MarkdownIt = require('markdown-it');
 
 const mdParser = new MarkdownIt({ html: true, linkify: true, typographer: true });
 
-function runPandoc(args) {
-  return new Promise((resolve, reject) => {
-    execFile('pandoc', args, { windowsHide: true, timeout: 30000 }, (err, _stdout, stderr) => {
-      if (err) {
-        const msg = err.code === 'ENOENT'
-          ? 'Pandoc is not installed.\n\nDownload from: https://pandoc.org/installing.html\n\nAfter installing, restart the app.'
-          : (stderr || err.message);
-        reject(new Error(msg));
-      } else {
-        resolve();
-      }
-    });
-  });
-}
-
-async function exportPdf(markdown, defaultName) {
+async function exportPdf(renderedHtml, cssText, defaultName) {
   const { canceled, filePath } = await dialog.showSaveDialog({
     defaultPath: defaultName + '.pdf',
     filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
   });
   if (canceled || !filePath) return { success: false, canceled: true };
 
-  const tmpMd = path.join(os.tmpdir(), `mdviewer-${Date.now()}.md`);
+  const html = [
+    '<!doctype html><html><head>',
+    '<meta charset="utf-8">',
+    `<title>${defaultName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>`,
+    '<style>', cssText.replace(/<\/style/gi, '<\\/style'), '</style>',
+    '<style>',
+    // Fix table clipping and add print-friendly resets
+    'body{margin:0;background:#fff!important;color:#000!important}',
+    '.preview{padding:32px!important;max-width:860px;margin:0 auto}',
+    '.preview table{display:table!important;overflow-x:visible!important;width:100%!important}',
+    '.preview td,.preview th{word-break:break-word;overflow-wrap:break-word}',
+    '.preview pre{page-break-inside:avoid}',
+    '.preview h1,.preview h2,.preview h3{page-break-after:avoid}',
+    '</style>',
+    '</head><body>',
+    '<div class="preview">', renderedHtml, '</div>',
+    '</body></html>',
+  ].join('\n');
+
+  const tmpHtml = path.join(os.tmpdir(), `mdviewer-${Date.now()}.html`);
+  let win = null;
   try {
-    await fs.writeFile(tmpMd, markdown, 'utf8');
-    await runPandoc([
-      tmpMd,
-      '-o', filePath,
-      '--standalone',
-      '-V', 'geometry:margin=1in',
-      '-V', 'colorlinks=true',
-      '-V', 'linkcolor=blue',
-    ]);
+    await fs.writeFile(tmpHtml, html, 'utf8');
+    win = new BrowserWindow({
+      show: false,
+      width: 900,
+      height: 1200,
+      webPreferences: { nodeIntegration: false, contextIsolation: true },
+    });
+    await win.loadFile(tmpHtml);
+    await new Promise(r => setTimeout(r, 300));
+    const pdfBuffer = await win.webContents.printToPDF({
+      printBackground: true,
+      pageSize: 'A4',
+      marginsType: 0,
+    });
+    await fs.writeFile(filePath, pdfBuffer);
     return { success: true, savedPath: filePath };
   } catch (e) {
     return { success: false, error: e.message };
   } finally {
-    fs.unlink(tmpMd).catch(() => {});
+    if (win && !win.isDestroyed()) win.close();
+    fs.unlink(tmpHtml).catch(() => {});
   }
 }
 

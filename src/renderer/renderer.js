@@ -363,7 +363,12 @@ if (exportBtn && exportMenu) {
 
         let result;
         if (format === 'pdf') {
-          result = await window.electronAPI.exportFile('pdf', { markdown: editor.value, defaultName });
+          const cssText = await window.electronAPI.getStylesCss();
+          result = await window.electronAPI.exportFile('pdf', {
+            renderedHtml: preview.innerHTML,
+            cssText,
+            defaultName,
+          });
         } else if (format === 'html') {
           const cssText = await window.electronAPI.getStylesCss();
           result = await window.electronAPI.exportFile('html', {

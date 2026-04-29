@@ -343,7 +343,7 @@ ipcMain.handle('get-styles-css', async () => {
 });
 
 ipcMain.handle('export:pdf', async (event, payload = {}) => {
-  return exporter.exportPdf(payload.markdown || '', payload.defaultName || 'document');
+  return exporter.exportPdf(payload.renderedHtml || '', payload.cssText || '', payload.defaultName || 'document');
 });
 
 ipcMain.handle('export:html', async (event, payload = {}) => {
