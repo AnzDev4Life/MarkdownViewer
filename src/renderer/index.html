@@ -4,21 +4,55 @@
   <meta charset="utf-8" />
   <title>Markdown Viewer</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:;">
+  <link id="hlTheme" rel="stylesheet" href="">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header>
-    <div class="controls">
-      <button id="openBtn">Open File</button>
-      <button id="beautifyBtn">Beautify</button>
-      <button id="minifyBtn">Minify</button>
-      <button id="toggleSourceBtn">Toggle Source</button>
-      <button id="togglePreviewBtn">Toggle Preview</button>
-      <select id="recentFiles"><option value="">Recent files</option></select>
-      <input id="searchBox" type="search" placeholder="Search in document">
-      <button id="findNextBtn">Find</button>
-      <label>Theme: <select id="themeToggle"><option value="light">Light</option><option value="dark">Dark</option></select></label>
-      <label>Font size: <input id="fontSize" type="range" min="12" max="24" value="14"></label>
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button id="openBtn" title="Open file (Ctrl+O)">Open</button>
+        <select id="recentFiles" title="Recent files"><option value="">Recent files</option></select>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <button id="toggleSourceBtn" class="toggle-btn active" title="Toggle editor panel">Editor</button>
+        <button id="togglePreviewBtn" class="toggle-btn active" title="Toggle preview panel">Preview</button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <button id="beautifyBtn" title="Format/beautify document">Format</button>
+        <button id="minifyBtn" title="Minify document">Minify</button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <input id="searchBox" type="search" placeholder="Find...">
+        <button id="findNextBtn">Find</button>
+      </div>
+      <div class="toolbar-spacer"></div>
+      <div class="toolbar-group">
+        <label class="toolbar-label">Theme
+          <select id="themeToggle">
+            <optgroup label="Light">
+              <option value="light">Light</option>
+              <option value="github" selected>GitHub</option>
+              <option value="solarized-light">Solarized Light</option>
+            </optgroup>
+            <optgroup label="Dark">
+              <option value="dark">Dark</option>
+              <option value="github-dark">GitHub Dark</option>
+              <option value="solarized-dark">Solarized Dark</option>
+              <option value="dracula">Dracula</option>
+              <option value="nord">Nord</option>
+            </optgroup>
+          </select>
+        </label>
+        <label class="toolbar-label font-label" title="Font size">
+          <span class="font-sm">A</span>
+          <input id="fontSize" type="range" min="12" max="24" value="14">
+          <span class="font-lg">A</span>
+        </label>
+      </div>
     </div>
   </header>
   <main>
@@ -26,7 +60,7 @@
     <div id="preview" class="preview"></div>
   </main>
   <footer id="statusBar">
-    <span id="statusLeft"></span>
+    <span id="statusLeft">Untitled  ·  0 words  ·  1 lines</span>
     <span id="statusRight">AnzDev4Life</span>
   </footer>
   <script src="renderer.js"></script>

@@ -1,30 +1,58 @@
-const editor = document.getElementById("editor");
-const preview = document.getElementById("preview");
-const openBtn = document.getElementById("openBtn");
-const beautifyBtn = document.getElementById("beautifyBtn");
-const minifyBtn = document.getElementById("minifyBtn");
-const toggleSourceBtn = document.getElementById("toggleSourceBtn");
-const togglePreviewBtn = document.getElementById("togglePreviewBtn");
-const recentFilesSelect = document.getElementById("recentFiles");
-const searchBox = document.getElementById("searchBox");
-const findNextBtn = document.getElementById("findNextBtn");
-const themeToggle = document.getElementById("themeToggle");
-const fontSize = document.getElementById("fontSize");
+const editor = document.getElementById('editor');
+const preview = document.getElementById('preview');
+const openBtn = document.getElementById('openBtn');
+const beautifyBtn = document.getElementById('beautifyBtn');
+const minifyBtn = document.getElementById('minifyBtn');
+const toggleSourceBtn = document.getElementById('toggleSourceBtn');
+const togglePreviewBtn = document.getElementById('togglePreviewBtn');
+const recentFilesSelect = document.getElementById('recentFiles');
+const searchBox = document.getElementById('searchBox');
+const findNextBtn = document.getElementById('findNextBtn');
+const themeToggle = document.getElementById('themeToggle');
+const fontSize = document.getElementById('fontSize');
+
+const HL_THEME_MAP = {
+  'light':           '../../node_modules/highlight.js/styles/github.css',
+  'dark':            '../../node_modules/highlight.js/styles/github-dark.css',
+  'github':          '../../node_modules/highlight.js/styles/github.css',
+  'github-dark':     '../../node_modules/highlight.js/styles/github-dark.css',
+  'solarized-light': '../../node_modules/highlight.js/styles/base16/solarized-light.css',
+  'solarized-dark':  '../../node_modules/highlight.js/styles/base16/solarized-dark.css',
+  'dracula':         '../../node_modules/highlight.js/styles/base16/dracula.css',
+  'nord':            '../../node_modules/highlight.js/styles/base16/nord.css',
+};
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const hlLink = document.getElementById('hlTheme');
+  if (hlLink) hlLink.href = HL_THEME_MAP[theme] ?? HL_THEME_MAP['github'];
+  localStorage.setItem('theme', theme);
+  themeToggle.value = theme;
+}
 
 let currentFilePath = '';
+
+function updateStatus() {
+  const text = editor.value;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const lines = text.split('\n').length;
+  const name = currentFilePath ? currentFilePath.split(/[\\/]/).pop() : 'Untitled';
+  const statusLeft = document.getElementById('statusLeft');
+  if (statusLeft) statusLeft.textContent = `${name}  ·  ${words} words  ·  ${lines} lines`;
+}
 
 function isPreviewable(filePath) {
   if (!filePath || typeof filePath !== 'string') return false;
   const match = filePath.match(/\.([^.]+)$/);
   if (!match) return false;
-  const ext = match[1].toLowerCase();
-  return ['md','markdown','html','htm'].includes(ext);
+  return ['md', 'markdown', 'html', 'htm'].includes(match[1].toLowerCase());
 }
 
 function loadFile(path, content) {
   currentFilePath = path || '';
   editor.value = content || '';
   render();
+  updateStatus();
   if (isPreviewable(path)) {
     setEditorVisible(false);
     setPreviewVisible(true);
@@ -43,6 +71,7 @@ function setPreviewVisible(visible) {
     preview.classList.add('hidden');
     editor.classList.add('fullwidth');
   }
+  if (togglePreviewBtn) togglePreviewBtn.classList.toggle('active', visible);
 }
 
 function setEditorVisible(visible) {
@@ -53,9 +82,10 @@ function setEditorVisible(visible) {
     editor.classList.add('hidden');
     preview.classList.add('fullwidth');
   }
+  if (toggleSourceBtn) toggleSourceBtn.classList.toggle('active', visible);
 }
 
-let autoShowPreview = true; // when false, render() will not force preview visible
+let autoShowPreview = true;
 
 async function render() {
   try {
@@ -78,7 +108,6 @@ async function render() {
         preview.textContent = String(res || editor.value);
       }
     } else {
-      // No electronAPI available: default to hiding preview unless content clearly looks like HTML/Markdown
       const text = editor.value || '';
       const looksLikeMarkdown = /^\s*(#|[-*]|>|```)/.test(text);
       const looksLikeHtml = /<[a-z!][\s\S]*>/i.test(text);
@@ -99,38 +128,35 @@ async function render() {
 
 function loadRecentFiles() {
   let list = [];
-  try {
-    list = JSON.parse(localStorage.getItem('recentFiles') || '[]');
-  } catch(e) { list = []; }
+  try { list = JSON.parse(localStorage.getItem('recentFiles') || '[]'); } catch (e) { list = []; }
   recentFilesSelect.innerHTML = '<option value="">Recent files</option>';
   list.forEach((item, idx) => {
     const opt = document.createElement('option');
     opt.value = idx;
-    opt.textContent = item.name || item.path || `File ${idx+1}`;
+    opt.textContent = item.name || item.path || `File ${idx + 1}`;
     recentFilesSelect.appendChild(opt);
   });
 }
 
 function saveToRecent(filePath, content) {
   try {
-    const name = filePath ? (filePath.split(/[\\/]/).pop()) : 'Untitled';
+    const name = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled';
     let list = JSON.parse(localStorage.getItem('recentFiles') || '[]');
     list = list.filter(f => f.path !== filePath);
     list.unshift({ path: filePath, name, content });
-    if (list.length > 10) list = list.slice(0,10);
+    if (list.length > 10) list = list.slice(0, 10);
     localStorage.setItem('recentFiles', JSON.stringify(list));
     loadRecentFiles();
-  } catch(e) {}
+  } catch (e) {}
 }
 
-openBtn.addEventListener("click", async () => {
+openBtn.addEventListener('click', async () => {
   if (window.electronAPI && typeof window.electronAPI.openFile === 'function') {
     const result = await window.electronAPI.openFile();
     if (!result || result.canceled) return;
     loadFile(result.filePath || '', result.content);
     return;
   }
-  // Fallback for non-Electron contexts: use file input
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.md,.markdown,.txt,.json,.js,.ts,.html,.css,*/*';
@@ -138,62 +164,55 @@ openBtn.addEventListener("click", async () => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      loadFile(file.name || '', reader.result || '');
-    };
+    reader.onload = () => loadFile(file.name || '', reader.result || '');
     reader.readAsText(file);
   };
   input.click();
 });
 
-recentFilesSelect.addEventListener("change", () => {
+recentFilesSelect.addEventListener('change', () => {
   const idx = recentFilesSelect.value;
-  if (idx === "" ) return;
+  if (idx === '') return;
   const list = JSON.parse(localStorage.getItem('recentFiles') || '[]');
   const item = list[Number(idx)];
-  if (item) {
-    loadFile(item.path || '', item.content || '');
-  }
+  if (item) loadFile(item.path || '', item.content || '');
 });
 
-document.addEventListener("dragover", (e) => e.preventDefault());
-document.addEventListener("drop", async (e) => {
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', async (e) => {
   e.preventDefault();
   if (!e.dataTransfer || e.dataTransfer.files.length === 0) return;
   const file = e.dataTransfer.files[0];
   if (!file) return;
-  // Try to read via FileReader (works in both Electron renderer and browsers)
   try {
     const reader = new FileReader();
-    reader.onload = () => {
-      loadFile(file.path || file.name || '', reader.result || '');
-    };
+    reader.onload = () => loadFile(file.path || file.name || '', reader.result || '');
     reader.readAsText(file);
   } catch (err) {
-    // As a last resort, if electronAPI exists, ask main to read the file path
     if (window.electronAPI && typeof window.electronAPI.openFile === 'function' && file.path) {
       const result = await window.electronAPI.openFile();
       if (result && !result.canceled) {
         currentFilePath = result.filePath || '';
         editor.value = result.content;
         render();
+        updateStatus();
         if (result.filePath) saveToRecent(result.filePath, result.content);
       }
     }
   }
 });
 
-// Beautify/Minify buttons
 if (beautifyBtn) {
   beautifyBtn.addEventListener('click', async () => {
     try {
       const text = editor.value;
-      const formatted = (window.electronAPI && typeof window.electronAPI.beautify === 'function') ? await window.electronAPI.beautify(text, currentFilePath) : text;
+      const formatted = (window.electronAPI && typeof window.electronAPI.beautify === 'function')
+        ? await window.electronAPI.beautify(text, currentFilePath) : text;
       editor.value = formatted || text;
       render();
     } catch (e) {
       console.error('Beautify error', e);
-      alert('Beautify failed: ' + (e && e.message || e));
+      alert('Format failed: ' + (e && e.message || e));
     }
   });
 }
@@ -202,7 +221,8 @@ if (minifyBtn) {
   minifyBtn.addEventListener('click', async () => {
     try {
       const text = editor.value;
-      const minified = (window.electronAPI && typeof window.electronAPI.minify === 'function') ? await window.electronAPI.minify(text, currentFilePath) : text;
+      const minified = (window.electronAPI && typeof window.electronAPI.minify === 'function')
+        ? await window.electronAPI.minify(text, currentFilePath) : text;
       editor.value = minified || text;
       render();
     } catch (e) {
@@ -212,20 +232,20 @@ if (minifyBtn) {
   });
 }
 
-themeToggle.addEventListener("change", () => {
-  document.documentElement.setAttribute("data-theme", themeToggle.value);
-});
-fontSize.addEventListener("input", () => {
-  editor.style.fontSize = fontSize.value + "px";
-  preview.style.fontSize = fontSize.value + "px";
+themeToggle.addEventListener('change', () => applyTheme(themeToggle.value));
+
+fontSize.addEventListener('input', () => {
+  const size = fontSize.value + 'px';
+  editor.style.fontSize = size;
+  preview.style.fontSize = size;
+  localStorage.setItem('fontSize', fontSize.value);
 });
 
-// toggle buttons
 if (togglePreviewBtn) {
   togglePreviewBtn.addEventListener('click', () => {
     const currentlyHidden = preview.classList.contains('hidden');
     setPreviewVisible(currentlyHidden);
-    autoShowPreview = currentlyHidden; // if we just showed it, allow future auto shows; if we hid it manually, stop auto re-opening
+    autoShowPreview = currentlyHidden;
   });
 }
 
@@ -236,13 +256,11 @@ if (toggleSourceBtn) {
   });
 }
 
-// handle file sent from main process (startup/auto-open)
 async function applyFileResult(result) {
   if (!result || result.canceled) return;
   loadFile(result.filePath || '', result.content || '');
 }
 
-// ask main for initial file when DOM is ready
 window.addEventListener('DOMContentLoaded', async () => {
   if (window.electronAPI && typeof window.electronAPI.getInitialFile === 'function') {
     const res = await window.electronAPI.getInitialFile();
@@ -251,23 +269,26 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 if (window.electronAPI && typeof window.electronAPI.onAutoOpen === 'function') {
-  window.electronAPI.onAutoOpen(async (res) => {
-    await applyFileResult(res);
-  });
+  window.electronAPI.onAutoOpen(async (res) => applyFileResult(res));
 }
 
-// search
+// Live preview: debounced render on every keystroke
+let renderTimer = null;
+editor.addEventListener('input', () => {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(render, 150);
+  updateStatus();
+});
+
+// Search
 let lastSearchTerm = '';
 let lastSearchIndex = 0;
 
-findNextBtn.addEventListener("click", () => {
+findNextBtn.addEventListener('click', () => {
   const q = searchBox.value;
   if (!q) return;
   const text = editor.value;
-  if (q !== lastSearchTerm) {
-    lastSearchTerm = q;
-    lastSearchIndex = 0;
-  }
+  if (q !== lastSearchTerm) { lastSearchTerm = q; lastSearchIndex = 0; }
   const found = text.indexOf(q, lastSearchIndex);
   if (found === -1) {
     lastSearchIndex = 0;
@@ -285,11 +306,7 @@ findNextBtn.addEventListener("click", () => {
   }
 });
 
-// initial load
-loadRecentFiles();
-render();
-
-// Parallel scrolling: sync scroll position between editor and preview when both are visible
+// Scroll sync between editor and preview
 let _scrollSyncing = false;
 
 function syncScroll(source, target) {
@@ -307,10 +324,18 @@ function bothPanelsVisible() {
   return !editor.classList.contains('hidden') && !preview.classList.contains('hidden');
 }
 
-editor.addEventListener('scroll', () => {
-  if (bothPanelsVisible()) syncScroll(editor, preview);
-});
+editor.addEventListener('scroll', () => { if (bothPanelsVisible()) syncScroll(editor, preview); });
+preview.addEventListener('scroll', () => { if (bothPanelsVisible()) syncScroll(preview, editor); });
 
-preview.addEventListener('scroll', () => {
-  if (bothPanelsVisible()) syncScroll(preview, editor);
-});
+// --- Startup ---
+const savedTheme = localStorage.getItem('theme') || 'github';
+const savedFontSize = localStorage.getItem('fontSize') || '14';
+fontSize.value = savedFontSize;
+editor.style.fontSize = savedFontSize + 'px';
+preview.style.fontSize = savedFontSize + 'px';
+applyTheme(savedTheme);
+setEditorVisible(true);
+setPreviewVisible(true);
+loadRecentFiles();
+render();
+updateStatus();

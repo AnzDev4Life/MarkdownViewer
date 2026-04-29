@@ -49,6 +49,31 @@ const md = new MarkdownIt({
   }
 });
 
+function taskListPlugin(md) {
+  md.core.ruler.push('task_list', (state) => {
+    const tokens = state.tokens;
+    for (let i = 1; i < tokens.length; i++) {
+      if (tokens[i].type !== 'inline') continue;
+      let prev = i - 1;
+      while (prev >= 0 && tokens[prev].type !== 'list_item_open' && tokens[prev].type !== 'list_item_close') prev--;
+      if (prev < 0 || tokens[prev].type !== 'list_item_open') continue;
+      const children = tokens[i].children;
+      if (!children || !children.length) continue;
+      const first = children[0];
+      if (first.type !== 'text') continue;
+      const match = /^\[([ xX])\] /.exec(first.content);
+      if (!match) continue;
+      const checked = match[1].toLowerCase() === 'x';
+      first.content = first.content.slice(match[0].length);
+      const cb = new state.Token('html_inline', '', 0);
+      cb.content = `<input type="checkbox"${checked ? ' checked' : ''} disabled class="task-checkbox"> `;
+      children.unshift(cb);
+      tokens[prev].attrSet('class', 'task-list-item');
+    }
+  });
+}
+taskListPlugin(md);
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1000,
@@ -219,26 +244,32 @@ ipcMain.handle('get-initial-file', async () => {
 
 ipcMain.handle('render:markdown', (event, text, filePath) => {
   try {
-    const ext = getExt(filePath) || detectTypeFromContent(text) || '';
-    if (ext === 'html') {
-      // sanitize HTML before returning
-      const sanitized = sanitizeHtml(String(text || ''), {
-        allowedSchemes: ['http', 'https', 'mailto', 'data'],
-        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img','style','link']),
+    const str = String(text || '');
+    const ext = getExt(filePath);
+    let contentType = ext;
+    if (!contentType) {
+      contentType = /^\s*<(!DOCTYPE\s+html|html[\s>])/i.test(str) ? 'html' : 'md';
+    }
+    if (contentType === 'html' || contentType === 'htm') {
+      const sanitized = sanitizeHtml(str, {
+        allowedSchemes: ['http', 'https', 'mailto'],
+        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'del', 'ins', 'sup', 'sub', 'mark']),
         allowedAttributes: {
-          '*': ['class', 'id', 'style', 'src', 'href', 'alt', 'title', 'width', 'height']
+          'a':     ['href', 'title', 'target'],
+          'img':   ['src', 'alt', 'title', 'width', 'height'],
+          'input': ['type', 'checked', 'disabled', 'class'],
+          '*':     ['class', 'id']
         }
       });
       return { type: 'html', content: sanitized };
     }
-    if (ext === 'md' || ext === 'markdown') {
-      return { type: 'markdown', content: md.render(String(text || '')) };
+    if (contentType === 'md' || contentType === 'markdown') {
+      return { type: 'markdown', content: md.render(str) };
     }
-    // default: plain text
-    return { type: 'plain', content: String(text || '') };
+    return { type: 'plain', content: str };
   } catch (e) {
     console.error('Markdown render error', e);
-    return { type: 'plain', content: String(text || '') };
+    return { type: 'plain', content: str };
   }
 });
 
