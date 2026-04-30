@@ -4,10 +4,9 @@
   "description": "A fast, lightweight Markdown viewer",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "build": "electron-builder --publish never",
+    "release": "electron-builder --publish always"
   },
   "keywords": [],
   "author": "Anson Nguyen",
@@ -27,7 +26,7 @@
     "electron-builder": "^26.8.1"
   },
   "build": {
-    "appId": "com.example.markdownviewer",
+    "appId": "com.anzdev4life.markdownviewer",
     "productName": "MarkdownViewer",
     "fileAssociations": [
       {
@@ -49,6 +48,12 @@
       ],
       "icon": "build/icon.ico",
       "publisherName": "Anson Nguyen"
+    },
+    "nsis": {
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     },
     "publish": [
       {
