@@ -54,7 +54,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "AnzDev4Life",
+        "owner": "AnsCodeLab",
         "repo": "MarkdownViewer",
         "releaseType": "release"
       }
