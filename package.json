@@ -9,7 +9,7 @@
     "release": "electron-builder --publish always"
   },
   "keywords": [],
-  "author": "Anson Nguyen",
+  "author": "AnsCodeLab",
   "license": "ISC",
   "dependencies": {
     "clean-css": "^5.3.3",
@@ -45,13 +45,9 @@
     "win": {
       "target": [
         "nsis"
-      ],
-      "icon": "build/icon.ico",
-      "publisherName": "Anson Nguyen"
+      ]
     },
     "nsis": {
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
