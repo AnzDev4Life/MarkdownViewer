@@ -12,20 +12,21 @@
     <div class="toolbar">
       <div class="toolbar-group">
         <button id="openBtn" title="Open file (Ctrl+O)">Open</button>
-        <select id="recentFiles" title="Recent files"><option value="">Recent files</option></select>
       </div>
+      <div class="toolbar-sep" data-overflow-priority="2"></div>
+      <select id="recentFiles" data-overflow-priority="2" title="Recent files"><option value="">Recent files</option></select>
       <div class="toolbar-sep"></div>
       <div class="toolbar-group">
         <button id="toggleSourceBtn" class="toggle-btn active" title="Toggle editor panel">Editor</button>
         <button id="togglePreviewBtn" class="toggle-btn active" title="Toggle preview panel">Preview</button>
       </div>
-      <div class="toolbar-sep"></div>
-      <div class="toolbar-group">
+      <div class="toolbar-sep" data-overflow-priority="2"></div>
+      <div class="toolbar-group" data-overflow-priority="2">
         <button id="beautifyBtn" title="Format/beautify document">Format</button>
         <button id="minifyBtn" title="Minify document">Minify</button>
       </div>
-      <div class="toolbar-sep"></div>
-      <div class="export-dropdown" id="exportDropdown">
+      <div class="toolbar-sep" data-overflow-priority="2"></div>
+      <div class="export-dropdown" id="exportDropdown" data-overflow-priority="2">
         <button id="exportBtn" title="Export document">Export ▾</button>
         <div class="dropdown-menu" id="exportMenu">
           <button class="dropdown-item" data-format="pdf">PDF Document</button>
@@ -33,13 +34,13 @@
           <button class="dropdown-item" data-format="html">HTML File</button>
         </div>
       </div>
-      <div class="toolbar-sep"></div>
-      <div class="toolbar-group">
+      <div class="toolbar-sep" data-overflow-priority="2"></div>
+      <div class="toolbar-group" data-overflow-priority="2">
         <input id="searchBox" type="search" placeholder="Find...">
         <button id="findNextBtn">Find</button>
       </div>
       <div class="toolbar-spacer"></div>
-      <div class="toolbar-group">
+      <div class="toolbar-group" data-overflow-priority="3">
         <label class="toolbar-label">Theme
           <select id="themeToggle">
             <optgroup label="Light">
@@ -62,6 +63,60 @@
           <span class="font-lg">A</span>
         </label>
       </div>
+      <div class="overflow-dropdown">
+        <button id="overflowBtn" title="More options">⋯</button>
+        <div class="dropdown-menu" id="overflowMenu">
+          <div id="ovfRecentSection">
+            <div style="padding:4px">
+              <select id="ovfRecentFiles" style="width:100%;font-size:11px"><option value="">Recent files</option></select>
+            </div>
+            <div class="dropdown-divider"></div>
+          </div>
+          <div id="ovfActionsSection">
+            <div class="overflow-row">
+              <button id="ovfBeautifyBtn">Format</button>
+              <button id="ovfMinifyBtn">Minify</button>
+            </div>
+            <button class="dropdown-item ovf-export-item" data-format="pdf">Export PDF</button>
+            <button class="dropdown-item ovf-export-item" data-format="docx">Export Word (.docx)</button>
+            <button class="dropdown-item ovf-export-item" data-format="html">Export HTML</button>
+          </div>
+          <div id="ovfSearchSection">
+            <div class="dropdown-divider"></div>
+            <div class="overflow-search">
+              <input id="ovfSearchBox" type="search" placeholder="Find...">
+              <button id="ovfFindBtn">Find</button>
+            </div>
+          </div>
+          <div id="ovfSettingsSection">
+            <div class="dropdown-divider"></div>
+            <div class="overflow-settings">
+              <label class="overflow-setting-label">
+                <span>Theme</span>
+                <select id="ovfThemeToggle">
+                  <optgroup label="Light">
+                    <option value="light">Light</option>
+                    <option value="github">GitHub</option>
+                    <option value="solarized-light">Solarized Light</option>
+                  </optgroup>
+                  <optgroup label="Dark">
+                    <option value="dark">Dark</option>
+                    <option value="github-dark">GitHub Dark</option>
+                    <option value="solarized-dark">Solarized Dark</option>
+                    <option value="dracula">Dracula</option>
+                    <option value="nord">Nord</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label class="overflow-setting-label">
+                <span class="font-sm">A</span>
+                <input id="ovfFontSize" type="range" min="12" max="24" value="14">
+                <span class="font-lg">A</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
   <main>
@@ -70,7 +125,7 @@
   </main>
   <footer id="statusBar">
     <span id="statusLeft">Untitled  ·  0 words  ·  1 lines</span>
-    <span id="statusRight">Anson Nguyen</span>
+    <span id="statusRight">AnsCodeLab</span>
   </footer>
   <script src="renderer.js"></script>
 </body>

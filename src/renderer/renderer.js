@@ -12,6 +12,19 @@ const themeToggle = document.getElementById('themeToggle');
 const fontSize = document.getElementById('fontSize');
 const exportBtn = document.getElementById('exportBtn');
 const exportMenu = document.getElementById('exportMenu');
+const overflowBtn = document.getElementById('overflowBtn');
+const overflowMenu = document.getElementById('overflowMenu');
+const ovfBeautifyBtn = document.getElementById('ovfBeautifyBtn');
+const ovfMinifyBtn = document.getElementById('ovfMinifyBtn');
+const ovfSearchBox = document.getElementById('ovfSearchBox');
+const ovfFindBtn = document.getElementById('ovfFindBtn');
+const ovfThemeToggle = document.getElementById('ovfThemeToggle');
+const ovfFontSize = document.getElementById('ovfFontSize');
+const ovfRecentFiles = document.getElementById('ovfRecentFiles');
+const ovfRecentSection = document.getElementById('ovfRecentSection');
+const ovfActionsSection = document.getElementById('ovfActionsSection');
+const ovfSearchSection = document.getElementById('ovfSearchSection');
+const ovfSettingsSection = document.getElementById('ovfSettingsSection');
 
 const HL_THEME_MAP = {
   'light':           '../../node_modules/highlight.js/styles/github.css',
@@ -30,6 +43,7 @@ function applyTheme(theme) {
   if (hlLink) hlLink.href = HL_THEME_MAP[theme] ?? HL_THEME_MAP['github'];
   localStorage.setItem('theme', theme);
   themeToggle.value = theme;
+  if (ovfThemeToggle) ovfThemeToggle.value = theme;
 }
 
 let currentFilePath = '';
@@ -40,7 +54,7 @@ function updateStatus() {
   const lines = text.split('\n').length;
   const name = currentFilePath ? currentFilePath.split(/[\\/]/).pop() : 'Untitled';
   const statusLeft = document.getElementById('statusLeft');
-  if (statusLeft) statusLeft.textContent = `${name}  ·  ${words} words  ·  ${lines} lines`;
+  if (statusLeft) statusLeft.textContent = `${name}  ·  ${words} words  ·  ${lines} lines  ·  ${window.innerWidth}×${window.innerHeight}`;
 }
 
 function isPreviewable(filePath) {
@@ -58,6 +72,8 @@ function updateFormatButtons() {
   const enabled = FORMATTABLE_EXTS.has(ext);
   if (beautifyBtn) beautifyBtn.disabled = !enabled;
   if (minifyBtn) minifyBtn.disabled = !enabled;
+  if (ovfBeautifyBtn) ovfBeautifyBtn.disabled = !enabled;
+  if (ovfMinifyBtn) ovfMinifyBtn.disabled = !enabled;
 }
 
 function loadFile(path, content) {
@@ -101,6 +117,8 @@ function setEditorVisible(visible) {
 let autoShowPreview = true;
 
 async function render() {
+  clearFindMarks();
+  findTerm = '';
   try {
     if (window.electronAPI && typeof window.electronAPI.renderMarkdown === 'function') {
       const result = window.electronAPI.renderMarkdown(editor.value, currentFilePath);
@@ -143,11 +161,25 @@ function loadRecentFiles() {
   let list = [];
   try { list = JSON.parse(localStorage.getItem('recentFiles') || '[]'); } catch (e) { list = []; }
   recentFilesSelect.innerHTML = '<option value="">Recent files</option>';
+  if (ovfRecentFiles) {
+    while (ovfRecentFiles.firstChild) ovfRecentFiles.removeChild(ovfRecentFiles.firstChild);
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Recent files';
+    ovfRecentFiles.appendChild(placeholder);
+  }
   list.forEach((item, idx) => {
+    const label = item.name || item.path || `File ${idx + 1}`;
     const opt = document.createElement('option');
     opt.value = idx;
-    opt.textContent = item.name || item.path || `File ${idx + 1}`;
+    opt.textContent = label;
     recentFilesSelect.appendChild(opt);
+    if (ovfRecentFiles) {
+      const opt2 = document.createElement('option');
+      opt2.value = idx;
+      opt2.textContent = label;
+      ovfRecentFiles.appendChild(opt2);
+    }
   });
 }
 
@@ -252,6 +284,7 @@ fontSize.addEventListener('input', () => {
   editor.style.fontSize = size;
   preview.style.fontSize = size;
   localStorage.setItem('fontSize', fontSize.value);
+  if (ovfFontSize) ovfFontSize.value = fontSize.value;
 });
 
 if (togglePreviewBtn) {
@@ -296,28 +329,86 @@ editor.addEventListener('input', () => {
 // Search
 let lastSearchTerm = '';
 let lastSearchIndex = 0;
+let findTerm = '';
+let findIndex = 0;
 
-findNextBtn.addEventListener('click', () => {
+function clearFindMarks() {
+  preview.querySelectorAll('.find-mark').forEach(m => {
+    m.replaceWith(document.createTextNode(m.textContent));
+  });
+  try { preview.normalize(); } catch (e) {}
+}
+
+function applyFindMarks(term) {
+  clearFindMarks();
+  if (!term) return 0;
+  const lterm = term.toLowerCase();
+  const walker = document.createTreeWalker(preview, NodeFilter.SHOW_TEXT, null);
+  const ranges = [];
+  let node;
+  while ((node = walker.nextNode())) {
+    const ltext = node.textContent.toLowerCase();
+    let i = 0;
+    while ((i = ltext.indexOf(lterm, i)) !== -1) {
+      const range = document.createRange();
+      range.setStart(node, i);
+      range.setEnd(node, i + term.length);
+      ranges.push(range);
+      i++;
+    }
+  }
+  ranges.reverse().forEach(range => {
+    try {
+      const mark = document.createElement('mark');
+      mark.className = 'find-mark';
+      range.surroundContents(mark);
+    } catch (e) {}
+  });
+  return preview.querySelectorAll('.find-mark').length;
+}
+
+function doFind() {
   const q = searchBox.value;
   if (!q) return;
-  const text = editor.value;
-  if (q !== lastSearchTerm) { lastSearchTerm = q; lastSearchIndex = 0; }
-  const found = text.indexOf(q, lastSearchIndex);
-  if (found === -1) {
-    lastSearchIndex = 0;
-    const foundWrap = text.indexOf(q, 0);
-    if (foundWrap === -1) return;
-    editor.focus();
-    editor.setSelectionRange(foundWrap, foundWrap + q.length);
-    editor.scrollTop = editor.scrollHeight * (foundWrap / text.length);
-    lastSearchIndex = foundWrap + q.length;
-  } else {
+
+  const previewVisible = !preview.classList.contains('hidden');
+  const editorVisible = !editor.classList.contains('hidden');
+
+  if (previewVisible) {
+    if (q !== findTerm) { findTerm = q; findIndex = 0; applyFindMarks(q); }
+    else findIndex++;
+    const marks = [...preview.querySelectorAll('.find-mark')];
+    if (marks.length === 0) {
+      searchBox.classList.add('search-no-results');
+      setTimeout(() => searchBox.classList.remove('search-no-results'), 600);
+      return;
+    }
+    findIndex = findIndex % marks.length;
+    marks.forEach((m, i) => m.classList.toggle('find-mark-current', i === findIndex));
+    marks[findIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else if (editorVisible) {
+    if (q !== lastSearchTerm) { lastSearchTerm = q; lastSearchIndex = 0; }
+    const text = editor.value;
+    const ltext = text.toLowerCase();
+    let found = ltext.indexOf(q.toLowerCase(), lastSearchIndex);
+    if (found === -1) found = ltext.indexOf(q.toLowerCase(), 0);
+    if (found === -1) {
+      searchBox.classList.add('search-no-results');
+      setTimeout(() => searchBox.classList.remove('search-no-results'), 600);
+      return;
+    }
     editor.focus();
     editor.setSelectionRange(found, found + q.length);
     editor.scrollTop = editor.scrollHeight * (found / text.length);
     lastSearchIndex = found + q.length;
   }
+}
+
+searchBox.addEventListener('keydown', (e) => { if (e.key === 'Enter') doFind(); });
+searchBox.addEventListener('input', () => {
+  if (!searchBox.value) { clearFindMarks(); findTerm = ''; findIndex = 0; }
 });
+findNextBtn.addEventListener('click', doFind);
 
 // Scroll sync between editor and preview
 let _scrollSyncing = false;
@@ -341,6 +432,45 @@ editor.addEventListener('scroll', () => { if (bothPanelsVisible()) syncScroll(ed
 preview.addEventListener('scroll', () => { if (bothPanelsVisible()) syncScroll(preview, editor); });
 
 // Export dropdown
+async function handleExport(format) {
+  if (!editor.value.trim()) {
+    alert('Nothing to export — paste some Markdown first.');
+    return;
+  }
+  exportBtn.disabled = true;
+  exportBtn.textContent = 'Exporting...';
+  try {
+    const defaultName = currentFilePath
+      ? currentFilePath.split(/[\\/]/).pop().replace(/\.[^.]+$/, '')
+      : 'document';
+    let result;
+    if (format === 'pdf') {
+      const cssText = await window.electronAPI.getStylesCss();
+      result = await window.electronAPI.exportFile('pdf', { renderedHtml: preview.innerHTML, cssText, defaultName });
+    } else if (format === 'html') {
+      const cssText = await window.electronAPI.getStylesCss();
+      result = await window.electronAPI.exportFile('html', { renderedHtml: preview.innerHTML, cssText, defaultName });
+    } else if (format === 'docx') {
+      result = await window.electronAPI.exportFile('docx', { markdown: editor.value, defaultName });
+    }
+    if (result && result.success) {
+      const savedName = result.savedPath.split(/[\\/]/).pop();
+      const statusLeft = document.getElementById('statusLeft');
+      if (statusLeft) {
+        statusLeft.textContent = `Saved: ${savedName}`;
+        setTimeout(() => updateStatus(), 3000);
+      }
+    } else if (result && !result.canceled) {
+      alert('Export failed: ' + (result.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Export failed: ' + e.message);
+  } finally {
+    exportBtn.disabled = false;
+    exportBtn.textContent = 'Export ▾';
+  }
+}
+
 if (exportBtn && exportMenu) {
   exportBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -349,6 +479,7 @@ if (exportBtn && exportMenu) {
 
   document.addEventListener('click', () => {
     exportMenu.classList.remove('open');
+    if (overflowMenu) overflowMenu.classList.remove('open');
   });
 
   exportMenu.addEventListener('click', (e) => e.stopPropagation());
@@ -357,62 +488,103 @@ if (exportBtn && exportMenu) {
     item.addEventListener('click', async () => {
       exportMenu.classList.remove('open');
       if (exportBtn.disabled) return;
-      const format = item.dataset.format;
-
-      if (!editor.value.trim()) {
-        alert('Nothing to export — paste some Markdown first.');
-        return;
-      }
-
-      exportBtn.disabled = true;
-      exportBtn.textContent = 'Exporting...';
-
-      try {
-        const defaultName = currentFilePath
-          ? currentFilePath.split(/[\\/]/).pop().replace(/\.[^.]+$/, '')
-          : 'document';
-
-        let result;
-        if (format === 'pdf') {
-          const cssText = await window.electronAPI.getStylesCss();
-          result = await window.electronAPI.exportFile('pdf', {
-            renderedHtml: preview.innerHTML,
-            cssText,
-            defaultName,
-          });
-        } else if (format === 'html') {
-          const cssText = await window.electronAPI.getStylesCss();
-          result = await window.electronAPI.exportFile('html', {
-            renderedHtml: preview.innerHTML,
-            cssText,
-            defaultName,
-          });
-        } else if (format === 'docx') {
-          result = await window.electronAPI.exportFile('docx', {
-            markdown: editor.value,
-            defaultName,
-          });
-        }
-
-        if (result && result.success) {
-          const savedName = result.savedPath.split(/[\\/]/).pop();
-          const statusLeft = document.getElementById('statusLeft');
-          if (statusLeft) {
-            statusLeft.textContent = `Saved: ${savedName}`;
-            setTimeout(() => updateStatus(), 3000);
-          }
-        } else if (result && !result.canceled) {
-          alert('Export failed: ' + (result.error || 'Unknown error'));
-        }
-      } catch (e) {
-        alert('Export failed: ' + e.message);
-      } finally {
-        exportBtn.disabled = false;
-        exportBtn.textContent = 'Export ▾';
-      }
+      await handleExport(item.dataset.format);
     });
   });
 }
+
+// Overflow toolbar — measure actual overflow instead of fixed pixel thresholds
+function updateToolbarOverflow() {
+  const toolbar = document.querySelector('.toolbar');
+  const p2Els = document.querySelectorAll('[data-overflow-priority="2"]');
+  const p3Els = document.querySelectorAll('[data-overflow-priority="3"]');
+
+  // Reset: show everything, hide overflow button
+  p2Els.forEach(el => { el.style.display = ''; });
+  p3Els.forEach(el => { el.style.display = ''; });
+  if (overflowBtn) overflowBtn.style.display = 'none';
+
+  let p2Hidden = false;
+  let p3Hidden = false;
+
+  const spacer = toolbar.querySelector('.toolbar-spacer');
+  const tooTight = toolbar.scrollWidth > toolbar.clientWidth || (spacer && spacer.offsetWidth < 24);
+
+  if (tooTight) {
+    // Hide priority-2 (secondary tools), show overflow button
+    p2Els.forEach(el => { el.style.display = 'none'; });
+    if (overflowBtn) overflowBtn.style.display = 'inline-block';
+    p2Hidden = true;
+
+    // Still overflowing or tight? Hide priority-3 (theme/font) too
+    const stillTight = toolbar.scrollWidth > toolbar.clientWidth || (spacer && spacer.offsetWidth < 24);
+    if (stillTight) {
+      p3Els.forEach(el => { el.style.display = 'none'; });
+      p3Hidden = true;
+    }
+  }
+
+  if (ovfRecentSection) ovfRecentSection.style.display = p2Hidden ? '' : 'none';
+  if (ovfActionsSection) ovfActionsSection.style.display = p2Hidden ? '' : 'none';
+  if (ovfSearchSection) ovfSearchSection.style.display = p2Hidden ? '' : 'none';
+  if (ovfSettingsSection) ovfSettingsSection.style.display = p3Hidden ? '' : 'none';
+
+  if (!p2Hidden && overflowMenu) overflowMenu.classList.remove('open');
+}
+
+if (overflowBtn && overflowMenu) {
+  overflowBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    overflowMenu.classList.toggle('open');
+  });
+  overflowMenu.addEventListener('click', (e) => e.stopPropagation());
+}
+
+if (ovfRecentFiles) {
+  ovfRecentFiles.addEventListener('change', () => {
+    const idx = ovfRecentFiles.value;
+    if (idx === '') return;
+    recentFilesSelect.value = idx;
+    recentFilesSelect.dispatchEvent(new Event('change'));
+    ovfRecentFiles.value = '';
+    overflowMenu.classList.remove('open');
+  });
+}
+
+if (ovfBeautifyBtn) ovfBeautifyBtn.addEventListener('click', () => { overflowMenu.classList.remove('open'); beautifyBtn.click(); });
+if (ovfMinifyBtn) ovfMinifyBtn.addEventListener('click', () => { overflowMenu.classList.remove('open'); minifyBtn.click(); });
+
+document.querySelectorAll('.ovf-export-item').forEach((item) => {
+  item.addEventListener('click', async () => {
+    overflowMenu.classList.remove('open');
+    await handleExport(item.dataset.format);
+  });
+});
+
+if (ovfFindBtn) {
+  ovfFindBtn.addEventListener('click', () => {
+    searchBox.value = ovfSearchBox.value;
+    overflowMenu.classList.remove('open');
+    doFind();
+  });
+}
+if (ovfSearchBox) {
+  ovfSearchBox.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { searchBox.value = ovfSearchBox.value; doFind(); }
+  });
+}
+if (ovfThemeToggle) ovfThemeToggle.addEventListener('change', () => applyTheme(ovfThemeToggle.value));
+if (ovfFontSize) {
+  ovfFontSize.addEventListener('input', () => {
+    fontSize.value = ovfFontSize.value;
+    fontSize.dispatchEvent(new Event('input'));
+  });
+}
+
+new ResizeObserver(() => {
+  updateToolbarOverflow();
+  updateStatus();
+}).observe(document.querySelector('.toolbar'));
 
 // --- Startup ---
 updateFormatButtons();
@@ -421,9 +593,11 @@ const savedFontSize = localStorage.getItem('fontSize') || '14';
 fontSize.value = savedFontSize;
 editor.style.fontSize = savedFontSize + 'px';
 preview.style.fontSize = savedFontSize + 'px';
+if (ovfFontSize) ovfFontSize.value = savedFontSize;
 applyTheme(savedTheme);
 setEditorVisible(true);
 setPreviewVisible(true);
 loadRecentFiles();
 render();
 updateStatus();
+updateToolbarOverflow();

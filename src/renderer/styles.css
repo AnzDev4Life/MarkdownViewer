@@ -380,7 +380,12 @@ header {
   flex-shrink: 0;
 }
 
-.toolbar-spacer { flex: 1; }
+.toolbar-spacer { flex: 1; min-width: 0; }
+
+.toolbar-group:has(#searchBox) {
+  flex-shrink: 1;
+  min-width: 0;
+}
 
 .toolbar-label {
   display: flex;
@@ -448,7 +453,7 @@ input[type="search"] {
   cursor: pointer;
 }
 
-input[type="search"] { width: 160px; cursor: text; }
+input[type="search"] { width: 120px; min-width: 50px; cursor: text; }
 input[type="range"] { width: 70px; cursor: pointer; padding: 0; }
 
 /* ============================================================
@@ -672,4 +677,104 @@ textarea#editor.fullwidth { width: 100%; border-right: none; }
 
 .dropdown-item:hover {
   background: var(--btn-hover-bg);
+}
+
+/* ============================================================
+   OVERFLOW TOOLBAR
+   ============================================================ */
+
+.overflow-dropdown {
+  position: relative;
+  flex-shrink: 0;
+}
+
+#overflowBtn {
+  font-weight: 700;
+  letter-spacing: 1px;
+  display: none;
+}
+
+#overflowMenu {
+  right: 0;
+  left: auto;
+  min-width: 210px;
+}
+
+.overflow-row {
+  display: flex;
+  gap: 4px;
+  padding: 4px 4px 2px;
+}
+
+.overflow-row button {
+  flex: 1;
+  font-size: 11px;
+  padding: 5px 4px;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
+
+.overflow-search {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+
+.overflow-search input[type="search"] {
+  flex: 1;
+  width: auto;
+}
+
+.overflow-search button {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.overflow-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 6px;
+}
+
+.overflow-setting-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.overflow-setting-label select {
+  flex: 1;
+}
+
+.overflow-setting-label input[type="range"] {
+  flex: 1;
+  width: auto;
+  padding: 0;
+}
+
+/* Find highlights */
+.find-mark {
+  background: #fef08a;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.find-mark-current {
+  background: #fb923c;
+  outline: 2px solid #f97316;
+  border-radius: 2px;
+}
+
+#searchBox.search-no-results {
+  background: #fee2e2;
+  border-color: #fca5a5;
 }

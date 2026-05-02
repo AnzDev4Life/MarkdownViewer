@@ -80,6 +80,7 @@ function createWindow() {
     width: 1000,
     height: 700,
     title: APP_DISPLAY_NAME,
+    icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'src', 'preload.js'),
       nodeIntegration: false,

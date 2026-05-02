@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --publish never",
-    "release": "electron-builder --publish always"
+    "release": "electron-builder --publish always",
+    "download": "gh release download --pattern *Setup*.exe --dir %USERPROFILE%/Downloads --clobber"
   },
   "keywords": [],
   "author": "AnsCodeLab",
