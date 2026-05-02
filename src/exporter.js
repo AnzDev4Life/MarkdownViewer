@@ -8,9 +8,29 @@ const MarkdownIt = require('markdown-it');
 
 const mdParser = new MarkdownIt({ html: true, linkify: true, typographer: true });
 
-async function exportPdf(renderedHtml, cssText, defaultName) {
+const PAGE_SIZES = {
+  'A4':     { width: 794,  height: 1123, electron: 'A4'     },
+  'A3':     { width: 1123, height: 1587, electron: 'A3'     },
+  'Letter': { width: 816,  height: 1056, electron: 'Letter' },
+  'Legal':  { width: 816,  height: 1344, electron: 'Legal'  },
+};
+
+async function exportPdf(renderedHtml, cssText, defaultName, sourceFilePath = '') {
+  const sizeNames = Object.keys(PAGE_SIZES);
+  const { response: sizeIdx } = await dialog.showMessageBox({
+    type: 'question',
+    buttons: [...sizeNames, 'Cancel'],
+    defaultId: 0,
+    cancelId: sizeNames.length,
+    title: 'Export PDF',
+    message: 'Select page size',
+  });
+  if (sizeIdx === sizeNames.length) return { success: false, canceled: true };
+  const pageSize = PAGE_SIZES[sizeNames[sizeIdx]];
+
+  const defaultDir = sourceFilePath ? path.dirname(sourceFilePath) : '';
   const { canceled, filePath } = await dialog.showSaveDialog({
-    defaultPath: defaultName + '.pdf',
+    defaultPath: path.join(defaultDir || '.', defaultName + '.pdf'),
     filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
   });
   if (canceled || !filePath) return { success: false, canceled: true };
@@ -41,18 +61,17 @@ async function exportPdf(renderedHtml, cssText, defaultName) {
   let win = null;
   try {
     await fs.writeFile(tmpHtml, html, 'utf8');
-    // 794px = A4 width at 96 dpi — prevents mobile-width layout
     win = new BrowserWindow({
       show: false,
-      width: 794,
-      height: 1123,
+      width: pageSize.width,
+      height: pageSize.height,
       webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
     await win.loadFile(tmpHtml);
     await new Promise(r => setTimeout(r, 400));
     const pdfBuffer = await win.webContents.printToPDF({
       printBackground: false,
-      pageSize: 'A4',
+      pageSize: pageSize.electron,
       marginsType: 1,
     });
     await fs.writeFile(filePath, pdfBuffer);
@@ -65,9 +84,10 @@ async function exportPdf(renderedHtml, cssText, defaultName) {
   }
 }
 
-async function exportHtml(renderedHtml, cssText, defaultName) {
+async function exportHtml(renderedHtml, cssText, defaultName, sourceFilePath = '') {
+  const defaultDir = sourceFilePath ? path.dirname(sourceFilePath) : '';
   const { canceled, filePath } = await dialog.showSaveDialog({
-    defaultPath: defaultName + '.html',
+    defaultPath: path.join(defaultDir || '.', defaultName + '.html'),
     filters: [{ name: 'HTML File', extensions: ['html'] }],
   });
   if (canceled || !filePath) return { success: false, canceled: true };
@@ -97,14 +117,15 @@ async function exportHtml(renderedHtml, cssText, defaultName) {
   }
 }
 
-async function exportDocx(markdown, defaultName) {
+async function exportDocx(markdown, defaultName, sourceFilePath = '') {
   const {
     Document, Paragraph, TextRun, HeadingLevel,
     Table, TableRow, TableCell, WidthType, Packer, BorderStyle,
   } = require('docx');
 
+  const defaultDir = sourceFilePath ? path.dirname(sourceFilePath) : '';
   const { canceled, filePath } = await dialog.showSaveDialog({
-    defaultPath: defaultName + '.docx',
+    defaultPath: path.join(defaultDir || '.', defaultName + '.docx'),
     filters: [{ name: 'Word Document', extensions: ['docx'] }],
   });
   if (canceled || !filePath) return { success: false, canceled: true };

@@ -443,15 +443,16 @@ async function handleExport(format) {
     const defaultName = currentFilePath
       ? currentFilePath.split(/[\\/]/).pop().replace(/\.[^.]+$/, '')
       : 'document';
+    const sourceFilePath = currentFilePath || '';
     let result;
     if (format === 'pdf') {
       const cssText = await window.electronAPI.getStylesCss();
-      result = await window.electronAPI.exportFile('pdf', { renderedHtml: preview.innerHTML, cssText, defaultName });
+      result = await window.electronAPI.exportFile('pdf', { renderedHtml: preview.innerHTML, cssText, defaultName, sourceFilePath });
     } else if (format === 'html') {
       const cssText = await window.electronAPI.getStylesCss();
-      result = await window.electronAPI.exportFile('html', { renderedHtml: preview.innerHTML, cssText, defaultName });
+      result = await window.electronAPI.exportFile('html', { renderedHtml: preview.innerHTML, cssText, defaultName, sourceFilePath });
     } else if (format === 'docx') {
-      result = await window.electronAPI.exportFile('docx', { markdown: editor.value, defaultName });
+      result = await window.electronAPI.exportFile('docx', { markdown: editor.value, defaultName, sourceFilePath });
     }
     if (result && result.success) {
       const savedName = result.savedPath.split(/[\\/]/).pop();

@@ -344,15 +344,15 @@ ipcMain.handle('get-styles-css', async () => {
 });
 
 ipcMain.handle('export:pdf', async (event, payload = {}) => {
-  return exporter.exportPdf(payload.renderedHtml || '', payload.cssText || '', payload.defaultName || 'document');
+  return exporter.exportPdf(payload.renderedHtml || '', payload.cssText || '', payload.defaultName || 'document', payload.sourceFilePath || '');
 });
 
 ipcMain.handle('export:html', async (event, payload = {}) => {
-  return exporter.exportHtml(payload.renderedHtml || '', payload.cssText || '', payload.defaultName || 'document');
+  return exporter.exportHtml(payload.renderedHtml || '', payload.cssText || '', payload.defaultName || 'document', payload.sourceFilePath || '');
 });
 
 ipcMain.handle('export:docx', async (event, payload = {}) => {
-  return exporter.exportDocx(payload.markdown || '', payload.defaultName || 'document');
+  return exporter.exportDocx(payload.markdown || '', payload.defaultName || 'document', payload.sourceFilePath || '');
 });
 
 app.on('window-all-closed', () => {
